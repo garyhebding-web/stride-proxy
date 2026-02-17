@@ -10,16 +10,17 @@ export default async function handler(req, res) {
   try {
     // ── Token Refresh ──
     if (action === 'token') {
-      const { client_id, client_secret, refresh_token } = req.body || {};
+      const body = req.body || {};
+      const params = new URLSearchParams();
+      params.append('client_id', body.client_id || req.query.client_id || '');
+      params.append('client_secret', body.client_secret || req.query.client_secret || '');
+      params.append('refresh_token', body.refresh_token || req.query.refresh_token || '');
+      params.append('grant_type', 'refresh_token');
+
       const r = await fetch('https://www.strava.com/oauth/token', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          client_id,
-          client_secret,
-          refresh_token,
-          grant_type: 'refresh_token'
-        })
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params.toString()
       });
       const data = await r.json();
       return res.status(r.status).json(data);
