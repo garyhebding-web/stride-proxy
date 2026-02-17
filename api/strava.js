@@ -1,4 +1,5 @@
 export default async function handler(req, res) {
+  // Handle CORS preflight
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
@@ -7,6 +8,7 @@ export default async function handler(req, res) {
   const { action } = req.query;
 
   try {
+    // ── Token Refresh ──
     if (action === 'token') {
       const body = req.body || {};
       const params = new URLSearchParams();
@@ -24,6 +26,7 @@ export default async function handler(req, res) {
       return res.status(r.status).json(data);
     }
 
+    // ── Proxy Activities ──
     if (action === 'activities') {
       const token = req.query.token || (req.headers.authorization || '').replace('Bearer ','');
       const page = req.query.page || 1;
@@ -35,7 +38,33 @@ export default async function handler(req, res) {
       return res.status(r.status).json(data);
     }
 
-    return res.status(400).json({ error: 'Unknown action' });
+    // ── Activity Detail (HR zones, full polyline) ──
+    if (action === 'activity') {
+      const token = req.query.token || (req.headers.authorization || '').replace('Bearer ','');
+      const id = req.query.id;
+      if (!id) return res.status(400).json({ error: 'Missing activity id' });
+      const r = await fetch(
+        `https://www.strava.com/api/v3/activities/${id}?include_all_efforts=false`,
+        { headers: { Authorization: 'Bearer ' + token } }
+      );
+      const data = await r.json();
+      return res.status(r.status).json(data);
+    }
+
+    // ── Activity Zones ──
+    if (action === 'zones') {
+      const token = req.query.token || (req.headers.authorization || '').replace('Bearer ','');
+      const id = req.query.id;
+      if (!id) return res.status(400).json({ error: 'Missing activity id' });
+      const r = await fetch(
+        `https://www.strava.com/api/v3/activities/${id}/zones`,
+        { headers: { Authorization: 'Bearer ' + token } }
+      );
+      const data = await r.json();
+      return res.status(r.status).json(data);
+    }
+
+    return res.status(400).json({ error: 'Unknown action. Use ?action=token or ?action=activities' });
   } catch (e) {
     return res.status(500).json({ error: e.message });
   }
